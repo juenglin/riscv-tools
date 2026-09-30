@@ -1,0 +1,56 @@
+repos:
+  # ── Standard file hygiene ─────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: "fixtures/.*\\.bin$|scripts/stubs/.*\\.a$"
+      - id: end-of-file-fixer
+        exclude: "fixtures/.*\\.bin$|scripts/stubs/.*\\.a$"
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        exclude: "fixtures/.*\\.bin$"
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: detect-private-key
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+
+  # ── Shell scripts ─────────────────────────────────────────────────────────
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        # scripts/riscv64-musl-lld has no .sh suffix – include it explicitly
+        files: "scripts/.*\\.sh$|scripts/riscv64-musl-lld$"
+
+  # ── GitHub Actions workflow linting ───────────────────────────────────────
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  # ── Rust format + lint (mirrors `make check`) ─────────────────────────────
+  # Run as local hooks so they use the already-installed toolchain rather than
+  # a separate rustup installation managed by pre-commit.
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt --check
+        language: system
+        entry: cargo fmt --check
+        pass_filenames: false
+        types_or: [rust]
+        # Trigger whenever a .rs file or Cargo manifest changes.
+        files: "\\.rs$|Cargo\\.(toml|lock)$"
+
+      - id: cargo-clippy
+        name: cargo clippy
+        language: system
+        entry: cargo clippy --all-targets -- -D warnings
+        pass_filenames: false
+        types_or: [rust]
+        files: "\\.rs$|Cargo\\.(toml|lock)$"
