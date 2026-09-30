@@ -60,27 +60,34 @@ fn minimal_elf64(text: &[u8]) -> Vec<u8> {
     let sh_off = ((shstrtab_off + shstrtab.len() as u64) + 7) & !7;
 
     v.extend_from_slice(&[0x7f, b'E', b'L', b'F']);
-    v.push(2); v.push(1); v.push(1); v.push(0);
+    v.push(2);
+    v.push(1);
+    v.push(1);
+    v.push(0);
     v.extend_from_slice(&[0u8; 8]);
-    v.extend_from_slice(&2u16.to_le_bytes());   // ET_EXEC
+    v.extend_from_slice(&2u16.to_le_bytes()); // ET_EXEC
     v.extend_from_slice(&243u16.to_le_bytes()); // EM_RISCV
     v.extend_from_slice(&1u32.to_le_bytes());
-    v.extend_from_slice(&0u64.to_le_bytes());   // e_entry
-    v.extend_from_slice(&0u64.to_le_bytes());   // e_phoff
+    v.extend_from_slice(&0u64.to_le_bytes()); // e_entry
+    v.extend_from_slice(&0u64.to_le_bytes()); // e_phoff
     v.extend_from_slice(&sh_off.to_le_bytes());
-    v.extend_from_slice(&0u32.to_le_bytes());   // e_flags
-    v.extend_from_slice(&64u16.to_le_bytes());  // e_ehsize
+    v.extend_from_slice(&0u32.to_le_bytes()); // e_flags
+    v.extend_from_slice(&64u16.to_le_bytes()); // e_ehsize
     v.extend_from_slice(&56u16.to_le_bytes());
-    v.extend_from_slice(&0u16.to_le_bytes());   // e_phnum
-    v.extend_from_slice(&64u16.to_le_bytes());  // e_shentsize
-    v.extend_from_slice(&3u16.to_le_bytes());   // e_shnum
-    v.extend_from_slice(&2u16.to_le_bytes());   // e_shstrndx
+    v.extend_from_slice(&0u16.to_le_bytes()); // e_phnum
+    v.extend_from_slice(&64u16.to_le_bytes()); // e_shentsize
+    v.extend_from_slice(&3u16.to_le_bytes()); // e_shnum
+    v.extend_from_slice(&2u16.to_le_bytes()); // e_shstrndx
     assert_eq!(v.len(), 64);
 
     v.extend_from_slice(text);
-    while v.len() < shstrtab_off as usize { v.push(0); }
+    while v.len() < shstrtab_off as usize {
+        v.push(0);
+    }
     v.extend_from_slice(&shstrtab);
-    while v.len() < sh_off as usize { v.push(0); }
+    while v.len() < sh_off as usize {
+        v.push(0);
+    }
 
     v.extend_from_slice(&[0u8; 64]); // null shdr
     let flags: u64 = 6;
@@ -131,7 +138,7 @@ fn mafd_compressed_gives_rva20u64() {
     text.extend_from_slice(&0x023100b3u32.to_le_bytes()); // mul
     text.extend_from_slice(&0x00012087u32.to_le_bytes()); // flw
     text.extend_from_slice(&0x1000202fu32.to_le_bytes()); // lr.w
-    text.extend_from_slice(&0x0405u16.to_le_bytes());     // c.addi (compressed)
+    text.extend_from_slice(&0x0405u16.to_le_bytes()); // c.addi (compressed)
     let elf = minimal_elf64(&text);
     let (stdout, _, code) = run_on_bytes(&elf);
     assert_eq!(code, 0);
@@ -148,9 +155,9 @@ fn zba_instruction_gives_rva22u64() {
     text.extend_from_slice(&0x00012087u32.to_le_bytes()); // flw (F)
     text.extend_from_slice(&0x00013087u32.to_le_bytes()); // fld (D)
     text.extend_from_slice(&0x1000202fu32.to_le_bytes()); // lr.w (A)
-    text.extend_from_slice(&0x0405u16.to_le_bytes());     // c.addi (Zca)
-    text.extend_from_slice(&0x2000u16.to_le_bytes());     // c.fld (Zcd)
-    text.extend_from_slice(&word.to_le_bytes());          // sh1add (Zba)
+    text.extend_from_slice(&0x0405u16.to_le_bytes()); // c.addi (Zca)
+    text.extend_from_slice(&0x2000u16.to_le_bytes()); // c.fld (Zcd)
+    text.extend_from_slice(&word.to_le_bytes()); // sh1add (Zba)
     text.extend_from_slice(&0x0021_200fu32.to_le_bytes()); // cbo.clean (Zicbom)
     text.extend_from_slice(&0x0000_200fu32.to_le_bytes()); // cbo.zero (Zicboz)
     text.extend_from_slice(&0x4021_0053u32.to_le_bytes()); // fcvt.s.h (Zfhmin)
@@ -213,6 +220,9 @@ fn verbose_contains_extensions() {
     let elf = minimal_elf64(&mul);
     let (stdout, stderr, code) = run_verbose(&elf);
     assert_eq!(code, 0);
-    assert!(stderr.contains("Extensions"), "verbose should show extensions; got: {stderr}");
+    assert!(
+        stderr.contains("Extensions"),
+        "verbose should show extensions; got: {stderr}"
+    );
     assert_eq!(stdout, "RVA20U64");
 }

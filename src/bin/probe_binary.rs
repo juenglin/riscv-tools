@@ -10,13 +10,16 @@ use clap::Parser;
 
 use riscv_tools::{
     elf,
-    error::{AppError, exit},
-    profile::{Mode, PROFILES, smallest_containing},
+    error::{exit, AppError},
+    profile::{smallest_containing, Mode, PROFILES},
     scan,
 };
 
 #[derive(Parser)]
-#[command(name = "probe-binary", about = "Report the smallest RISC-V profile that covers a binary")]
+#[command(
+    name = "probe-binary",
+    about = "Report the smallest RISC-V profile that covers a binary"
+)]
 struct Args {
     /// Print per-section extension sets and profile reasoning
     #[arg(short, long)]
@@ -32,11 +35,12 @@ fn main() {
 }
 
 fn run(args: &Args) -> i32 {
-    let bytes = match std::fs::read(&args.path)
-        .with_context(|| format!("reading {}", args.path))
-    {
+    let bytes = match std::fs::read(&args.path).with_context(|| format!("reading {}", args.path)) {
         Ok(b) => b,
-        Err(e) => { eprintln!("probe-binary: {e}"); return exit::IO; }
+        Err(e) => {
+            eprintln!("probe-binary: {e}");
+            return exit::IO;
+        }
     };
 
     let elf_info = match elf::parse(&bytes) {
@@ -46,11 +50,17 @@ fn run(args: &Args) -> i32 {
             return exit::NOT_ELF;
         }
         Err(AppError::NotRiscV { e_machine }) => {
-            eprintln!("probe-binary: {}: not a RISC-V ELF (e_machine={e_machine:#x})", args.path);
+            eprintln!(
+                "probe-binary: {}: not a RISC-V ELF (e_machine={e_machine:#x})",
+                args.path
+            );
             return exit::NOT_RISCV;
         }
         Err(AppError::BigEndian) => {
-            eprintln!("probe-binary: {}: big-endian RISC-V ELF (unsupported)", args.path);
+            eprintln!(
+                "probe-binary: {}: big-endian RISC-V ELF (unsupported)",
+                args.path
+            );
             return exit::UNSUPPORTED;
         }
         Err(e) => {
@@ -72,13 +82,21 @@ fn run(args: &Args) -> i32 {
         eprintln!("Instructions: {}", result.insn_count);
         eprintln!("Extensions  : {}", result.ext_used);
         eprintln!("Hints       : {}", result.hint_exts);
-        if result.has_supervisor { eprintln!("Supervisor  : yes"); }
-        if result.has_hypervisor { eprintln!("Hypervisor  : yes"); }
-        if result.has_machine   { eprintln!("Machine     : yes"); }
+        if result.has_supervisor {
+            eprintln!("Supervisor  : yes");
+        }
+        if result.has_hypervisor {
+            eprintln!("Hypervisor  : yes");
+        }
+        if result.has_machine {
+            eprintln!("Machine     : yes");
+        }
         if result.unknown_count > 0 {
-            eprintln!("Unknown     : {} instruction(s), first at {:#x}",
+            eprintln!(
+                "Unknown     : {} instruction(s), first at {:#x}",
                 result.unknown_count,
-                result.unknown_first_vaddr.unwrap_or(0));
+                result.unknown_first_vaddr.unwrap_or(0)
+            );
         }
         if let Some(a) = &elf_info.riscv_attributes {
             eprintln!(".riscv.attributes: {} bytes", a.len());
@@ -133,9 +151,7 @@ fn uncovered_exts(result: &scan::ScanResult, need_super: bool) -> String {
     let mut uncovered = ExtSet::empty();
     for ext in result.ext_used.iter() {
         let covered = PROFILES.iter().any(|p| {
-            p.xlen == result.xlen
-                && (!need_super || p.mode == Mode::S)
-                && p.mandatory.contains(ext)
+            p.xlen == result.xlen && (!need_super || p.mode == Mode::S) && p.mandatory.contains(ext)
         });
         if !covered {
             uncovered.insert(ext);

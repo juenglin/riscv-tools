@@ -25,10 +25,20 @@ pub struct Row32 {
 
 impl Row32 {
     const fn ext(mask: u32, matchv: u32, exts: &'static [Ext]) -> Self {
-        Row32 { mask, matchv, exts, is_hint: false }
+        Row32 {
+            mask,
+            matchv,
+            exts,
+            is_hint: false,
+        }
     }
     const fn hint(mask: u32, matchv: u32, exts: &'static [Ext]) -> Self {
-        Row32 { mask, matchv, exts, is_hint: true }
+        Row32 {
+            mask,
+            matchv,
+            exts,
+            is_hint: true,
+        }
     }
 }
 
@@ -42,10 +52,20 @@ pub struct Row16 {
 
 impl Row16 {
     const fn ext(mask: u16, matchv: u16, exts: &'static [Ext]) -> Self {
-        Row16 { mask, matchv, exts, is_hint: false }
+        Row16 {
+            mask,
+            matchv,
+            exts,
+            is_hint: false,
+        }
     }
     const fn hint(mask: u16, matchv: u16, exts: &'static [Ext]) -> Self {
-        Row16 { mask, matchv, exts, is_hint: true }
+        Row16 {
+            mask,
+            matchv,
+            exts,
+            is_hint: true,
+        }
     }
 }
 
@@ -69,21 +89,18 @@ pub static INSNS_32: &[Row32] = &[
     // Catch-all first; more-specific Zvfhmin/Zvbb entries are not needed for
     // profile matching since they push to the same RVA23U64 level as V.
     Row32::ext(0x0000_007f, 0x0000_0057, &[Ext::V]),
-
     // ── Vector loads (LOAD-FP = 0x07, funct3 ∉ {001,010,011}) ────────────
-    Row32::ext(0x0000_707f, 0x0000_0007, &[Ext::V]),  // EEW8  (funct3=000)
-    Row32::ext(0x0000_707f, 0x0000_5007, &[Ext::V]),  // EEW16 (funct3=101)
-    Row32::ext(0x0000_707f, 0x0000_6007, &[Ext::V]),  // EEW32 (funct3=110)
-    Row32::ext(0x0000_707f, 0x0000_7007, &[Ext::V]),  // EEW64 (funct3=111)
-    Row32::ext(0x0000_707f, 0x0000_4007, &[Ext::V]),  // mask/segment (funct3=100)
-
+    Row32::ext(0x0000_707f, 0x0000_0007, &[Ext::V]), // EEW8  (funct3=000)
+    Row32::ext(0x0000_707f, 0x0000_5007, &[Ext::V]), // EEW16 (funct3=101)
+    Row32::ext(0x0000_707f, 0x0000_6007, &[Ext::V]), // EEW32 (funct3=110)
+    Row32::ext(0x0000_707f, 0x0000_7007, &[Ext::V]), // EEW64 (funct3=111)
+    Row32::ext(0x0000_707f, 0x0000_4007, &[Ext::V]), // mask/segment (funct3=100)
     // ── Vector stores (STORE-FP = 0x27, funct3 ∉ {001,010,011}) ─────────
     Row32::ext(0x0000_707f, 0x0000_0027, &[Ext::V]),
     Row32::ext(0x0000_707f, 0x0000_5027, &[Ext::V]),
     Row32::ext(0x0000_707f, 0x0000_6027, &[Ext::V]),
     Row32::ext(0x0000_707f, 0x0000_7027, &[Ext::V]),
     Row32::ext(0x0000_707f, 0x0000_4027, &[Ext::V]),
-
     // ── Zfhmin: specific entries BEFORE the broad F/D catch-alls ─────────
     // fcvt.s.h rd, rs1 : funct7=0100000, rs2=00010 (H→S), fmt=00 → Zfhmin
     Row32::ext(0xfff0_007f, 0x4020_0053, &[Ext::Zfhmin]),
@@ -100,7 +117,6 @@ pub static INSNS_32: &[Row32] = &[
     Row32::ext(0x0000_707f, 0x0000_1007, &[Ext::Zfhmin]),
     // FSH (funct3=001, opcode=0x27) → Zfhmin
     Row32::ext(0x0000_707f, 0x0000_1027, &[Ext::Zfhmin]),
-
     // ── Zfa: additional FP instructions ──────────────────────────────────
     // fli.s (funct7=1111000, rs2=00001, fmt=00) : 0xF0100053
     Row32::ext(0xfff0_007f, 0xf010_0053, &[Ext::Zfa]),
@@ -132,11 +148,9 @@ pub static INSNS_32: &[Row32] = &[
     Row32::ext(0xfe00_707f, 0xa204_0053, &[Ext::Zfa]),
     // fltq.d: funct3=101
     Row32::ext(0xfe00_707f, 0xa205_0053, &[Ext::Zfa]),
-
     // ── Zfh full half-precision ───────────────────────────────────────────
     // OP-FP fmt=10 (excluding Zfhmin converts already listed above)
     Row32::ext(0x0600_007f, 0x0400_0053, &[Ext::Zfh]),
-
     // ── F single-precision ────────────────────────────────────────────────
     // OP-FP fmt=00 (broad catch, after Zfa/Zfhmin specific entries)
     Row32::ext(0x0600_007f, 0x0000_0053, &[Ext::F]),
@@ -149,7 +163,6 @@ pub static INSNS_32: &[Row32] = &[
     Row32::ext(0x0000_707f, 0x0000_2007, &[Ext::F]),
     // FSW (funct3=010, STORE-FP)
     Row32::ext(0x0000_707f, 0x0000_2027, &[Ext::F]),
-
     // ── D double-precision ────────────────────────────────────────────────
     Row32::ext(0x0600_007f, 0x0200_0053, &[Ext::D]), // OP-FP fmt=01
     Row32::ext(0x0600_007f, 0x0200_0043, &[Ext::D]), // MADD.D
@@ -160,19 +173,16 @@ pub static INSNS_32: &[Row32] = &[
     Row32::ext(0x0000_707f, 0x0000_3007, &[Ext::D]),
     // FSD (funct3=011, STORE-FP)
     Row32::ext(0x0000_707f, 0x0000_3027, &[Ext::D]),
-
     // ── M extension ───────────────────────────────────────────────────────
     // All M instructions in OP (0x33) have funct7=0000001.
     Row32::ext(0xfe00_007f, 0x0200_0033, &[Ext::M]),
     // All M instructions in OP-32 (0x3B).
     Row32::ext(0xfe00_007f, 0x0200_003b, &[Ext::M]),
-
     // ── A extension (AMO opcode = 0x2F) ───────────────────────────────────
     // word AMOs (funct3=010)
     Row32::ext(0x0000_707f, 0x0000_202f, &[Ext::A]),
     // double AMOs (funct3=011)
     Row32::ext(0x0000_707f, 0x0000_302f, &[Ext::A]),
-
     // ── B extension ───────────────────────────────────────────────────────
     // Zba: sh1add, sh2add, sh3add in OP (0x33)
     Row32::ext(0xfe00_707f, 0x2000_2033, &[Ext::Zba]), // sh1add
@@ -184,7 +194,6 @@ pub static INSNS_32: &[Row32] = &[
     Row32::ext(0xfe00_707f, 0x2000_403b, &[Ext::Zba]), // sh2add.uw
     Row32::ext(0xfe00_707f, 0x2000_603b, &[Ext::Zba]), // sh3add.uw
     Row32::ext(0xfc00_707f, 0x0800_101b, &[Ext::Zba]), // slli.uw (OP-IMM-32, funct6=000010)
-
     // Zbb: clz, ctz, cpop, andn, orn, xnor, min, minu, max, maxu,
     //      sext.b, sext.h, zext.h, rol, ror, rori, orc.b, rev8
     // clz: funct7=0110000, rs2=00000, funct3=001 in OP (0x33)
@@ -242,7 +251,6 @@ pub static INSNS_32: &[Row32] = &[
     // rev8 (RV64): funct7=0110101, rs2=11000, funct3=101 (OP-IMM)
     // rev8 is in both Zbb and Zbkb:
     Row32::ext(0xfff0_707f, 0x6b80_5013, &[Ext::Zbb, Ext::Zbkb]),
-
     // Zbs: bclr, bext, binv, bset and their immediate variants
     // bclr: funct7=0100100, funct3=001 (OP)
     Row32::ext(0xfe00_707f, 0x4800_1033, &[Ext::Zbs]),
@@ -260,12 +268,10 @@ pub static INSNS_32: &[Row32] = &[
     Row32::ext(0xfe00_707f, 0x2800_1033, &[Ext::Zbs]),
     // bseti: funct6=001010, funct3=001
     Row32::ext(0xfc00_707f, 0x2800_1013, &[Ext::Zbs]),
-
     // Zbc (carryless multiply — optional in RVA23, not mandatory in any profile)
     Row32::ext(0xfe00_707f, 0x0a00_1033, &[Ext::Zbc, Ext::Zbkc]), // clmul
     Row32::ext(0xfe00_707f, 0x0a00_3033, &[Ext::Zbc, Ext::Zbkc]), // clmulh
     Row32::ext(0xfe00_707f, 0x0a00_2033, &[Ext::Zbc, Ext::Zbkc]), // clmulr
-
     // ── Zicbom: cache-block management ──────────────────────────────────
     // cbo.inval rs1: 0000000_00011_rs1_010_00000_0001111
     Row32::ext(0xfff0_7fff, 0x0030_200f, &[Ext::Zicbom]),
@@ -273,11 +279,9 @@ pub static INSNS_32: &[Row32] = &[
     Row32::ext(0xfff0_7fff, 0x0010_200f, &[Ext::Zicbom]),
     // cbo.flush rs1: rs2=00010
     Row32::ext(0xfff0_7fff, 0x0020_200f, &[Ext::Zicbom]),
-
     // ── Zicboz: cache-block zero ─────────────────────────────────────────
     // cbo.zero rs1: 0000000_00000_rs1_010_00000_0001111
     Row32::ext(0xfff0_7fff, 0x0000_200f, &[Ext::Zicboz]),
-
     // ── Zicbop: prefetch hints (harmless, tracked as hints) ──────────────
     // prefetch.i: OP-IMM (0x13) funct7=0000000, rs2=00000, rd=0, funct3=110
     Row32::hint(0xfff0_707f, 0x0000_6013, &[Ext::Zicbop]),
@@ -285,32 +289,27 @@ pub static INSNS_32: &[Row32] = &[
     Row32::hint(0xfff0_707f, 0x0010_6013, &[Ext::Zicbop]),
     // prefetch.w: imm[11:5]=0000011
     Row32::hint(0xfff0_707f, 0x0030_6013, &[Ext::Zicbop]),
-
     // ── Zicond ────────────────────────────────────────────────────────────
     // czero.eqz: funct7=0000111, funct3=101 (OP)
     Row32::ext(0xfe00_707f, 0x0e00_5033, &[Ext::Zicond]),
     // czero.nez: funct3=111
     Row32::ext(0xfe00_707f, 0x0e00_7033, &[Ext::Zicond]),
-
     // ── Zimop: may-be-operations (mop.r.N, mop.rr.N) ─────────────────────
     // mop.r.N: SYSTEM, funct3=100, bit31=1, bits[30:26]=00000, bit25=1, rs1=00000
     //   mask: funct3+opcode + bits[31:25]+rs1 fields
     Row32::ext(0xfe0f_f07f, 0x8200_4073, &[Ext::Zimop]),
     // mop.rr.N: bit25=0, rs1 is variable
     Row32::ext(0xfe00_707f, 0x8000_4073, &[Ext::Zimop]),
-
     // ── Zawrs: wait-on-reservation-set ───────────────────────────────────
     // wrs.nto: SYSTEM, imm=0000000_00000, rs1=0, funct3=000, rd=0
     //   Encoding: 0x00d00073
     Row32::ext(0xffff_ffff, 0x00d0_0073, &[Ext::Zawrs]),
     // wrs.sto: 0x01d00073
     Row32::ext(0xffff_ffff, 0x01d0_0073, &[Ext::Zawrs]),
-
     // ── Zihintpause: pause ────────────────────────────────────────────────
     // pause = fence w, 0: MISC-MEM, imm=0001, pred=0001, succ=0000
     //   Encoding: 0x0100_000F
     Row32::hint(0xffff_ffff, 0x0100_000f, &[Ext::Zihintpause]),
-
     // ── Zihintntl: non-temporal locality hints ────────────────────────────
     // ntl.p1   = add x0, x0, x2 = 0x0020_0033  (rs1=0, rs2=2, rd=0)
     Row32::hint(0xffff_ffff, 0x0020_0033, &[Ext::Zihintntl]),
@@ -320,7 +319,6 @@ pub static INSNS_32: &[Row32] = &[
     Row32::hint(0xffff_ffff, 0x0040_0033, &[Ext::Zihintntl]),
     // ntl.all  = add x0, x0, x5
     Row32::hint(0xffff_ffff, 0x0050_0033, &[Ext::Zihintntl]),
-
     // ── CSR instructions (Zicsr) ─────────────────────────────────────────
     // CSRRW: funct3=001 in SYSTEM (0x73)
     Row32::ext(0x0000_707f, 0x0000_1073, &[Ext::Zicsr]),
@@ -334,7 +332,6 @@ pub static INSNS_32: &[Row32] = &[
     Row32::ext(0x0000_707f, 0x0000_6073, &[Ext::Zicsr]),
     // CSRRCI: funct3=111
     Row32::ext(0x0000_707f, 0x0000_7073, &[Ext::Zicsr]),
-
     // ── Privileged instructions ───────────────────────────────────────────
     // sret: 0001000_00010_00000_000_00000_1110011
     Row32::ext(0xffff_ffff, 0x1020_0073, &[Ext::Zifencei]), // sentinel: marks S-mode; we handle in scan
@@ -347,7 +344,6 @@ pub static INSNS_32: &[Row32] = &[
     // sfence.w.inval, sfence.inval.ir (Svinval): specific encodings
     Row32::ext(0xffff_ffff, 0x1800_0073, &[Ext::Zifencei]),
     Row32::ext(0xffff_ffff, 0x1810_0073, &[Ext::Zifencei]),
-
     // Hypervisor (Sha / H extension):
     // hfence.vvma: funct7=0010001
     Row32::ext(0xfe00_707f, 0x2200_0073, &[Ext::Sha]),
@@ -383,11 +379,9 @@ pub static INSNS_32: &[Row32] = &[
     Row32::ext(0xfe00_707f, 0x6a00_4073, &[Ext::Sha]),
     // hsv.d:  funct7=0110111
     Row32::ext(0xfe00_707f, 0x6e00_4073, &[Ext::Sha]),
-
     // ── Zifencei ─────────────────────────────────────────────────────────
     // fence.i: MISC-MEM (0x0F), funct3=001
     Row32::ext(0x0000_707f, 0x0000_100f, &[Ext::Zifencei]),
-
     // ── Base RV64I / RV32I (no extension needed) ─────────────────────────
     // These are listed so we don't treat them as "unknown".
     // LOAD (0x03): lb, lh, lw, lbu, lhu; RV64: ld, lwu
@@ -438,7 +432,6 @@ pub static INSNS_16: &[Row16] = &[
     Row16::ext(0xe003, 0x2002, &[Ext::Zcd]),
     // Q2 funct3=101: c.fsdsp
     Row16::ext(0xe003, 0xa002, &[Ext::Zcd]),
-
     // ── Zcb: additional compressed (more-specific before broad Zca) ───────
     // Q0 funct3=100 (0x8000 base, bits[12:10] discriminate):
     // c.lbu: bits[15:10]=100_000 → mask=0xfc03, match=0x8000
@@ -451,7 +444,6 @@ pub static INSNS_16: &[Row16] = &[
     Row16::ext(0xfc03, 0x9000, &[Ext::Zcb]),
     // c.sh:  bits[15:10]=100_101
     Row16::ext(0xfc03, 0x9400, &[Ext::Zcb]),
-
     // Q1 Zcb arithmetic (funct6=100_011, various funct2):
     // c.zext.b: bits[15:10]=100_011, bits[6:2]=11000 → 0x9c61 (approx)
     //   Exact: 100_0_11_rs1'_11_000_01
@@ -468,7 +460,6 @@ pub static INSNS_16: &[Row16] = &[
     Row16::ext(0xfc7f, 0x9c65, &[Ext::Zcb]),
     // c.mul: funct6=100_011, funct2=10 → bits[6:5]=10, bits[4:2]=000
     Row16::ext(0xfc63, 0x9c41, &[Ext::Zcb]),
-
     // ── Zcmop: compressed may-be-ops ─────────────────────────────────────
     // c.mop.N for odd N=1,3,5,7,9,11,13,15 in Q1.
     // Encoding: 100_N[3]_N[2:1]_0_1_000_01 (tentative; verify against spec)
@@ -487,7 +478,6 @@ pub static INSNS_16: &[Row16] = &[
     Row16::hint(0xffff, 0x9012, &[Ext::Zihintntl]),
     // c.ntl.all = c.add x0, x5 = 0x9016
     Row16::hint(0xffff, 0x9016, &[Ext::Zihintntl]),
-
     // ── Zca: common compressed (base for RV64) ────────────────────────────
     // Q0: c.addi4spn (funct3=000)
     Row16::ext(0xe003, 0x0000, &[Ext::Zca]),
@@ -499,10 +489,8 @@ pub static INSNS_16: &[Row16] = &[
     Row16::ext(0xe003, 0xc000, &[Ext::Zca]),
     // Q0: c.sd (funct3=111, RV64)
     Row16::ext(0xe003, 0xe000, &[Ext::Zca]),
-
     // Q1: all non-Zcb, non-Zcmop Q1 instructions
     Row16::ext(0x0003, 0x0001, &[Ext::Zca]), // all Q1
-
     // Q2: c.slli, c.lwsp, c.ldsp, c.jr, c.mv, c.ebreak, c.jalr, c.add, c.swsp, c.sdsp
     //   (Zcd Q2 already listed above with funct3=001/101)
     Row16::ext(0x0003, 0x0002, &[Ext::Zca]), // broad Q2 catch
@@ -536,9 +524,9 @@ pub fn system_privilege(word: u32) -> SystemPriv {
     // The funct7 field (bits[31:25]) is the discriminator for priv insns.
     let funct7 = (word >> 25) & 0x7f;
     match funct7 {
-        0b000_1000 => SystemPriv::Supervisor, // sret / wfi
-        0b000_1001 => SystemPriv::Supervisor, // sfence.vma
-        0b000_1011 => SystemPriv::Supervisor, // sinval.vma
+        0b000_1000 => SystemPriv::Supervisor,              // sret / wfi
+        0b000_1001 => SystemPriv::Supervisor,              // sfence.vma
+        0b000_1011 => SystemPriv::Supervisor,              // sinval.vma
         0b001_0001 | 0b001_0011 => SystemPriv::Hypervisor, // hfence.vvma / hinval.vvma
         0b011_0001 | 0b011_0011 => SystemPriv::Hypervisor, // hfence.gvma / hinval.gvma
         _ => SystemPriv::None,

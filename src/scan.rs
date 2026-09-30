@@ -1,12 +1,9 @@
 //! Scan a parsed ELF for used RISC-V extensions.
 
 use crate::{
-    elf::{ElfInfo, MappingSymbol, is_code_at},
+    elf::{is_code_at, ElfInfo, MappingSymbol},
     ext::{Ext, ExtSet},
-    isa::{
-        csr::CsrInfo,
-        DecodeResult, PrivLevel, decode_16, decode_32, insn_len,
-    },
+    isa::{csr::CsrInfo, decode_16, decode_32, insn_len, DecodeResult, PrivLevel},
 };
 
 /// Summary of extensions found while scanning a binary.
@@ -34,7 +31,10 @@ pub struct ScanResult {
 
 /// Scan all code regions in a parsed ELF file and return the extension summary.
 pub fn scan(elf: &ElfInfo) -> ScanResult {
-    let mut result = ScanResult { xlen: elf.xlen, ..Default::default() };
+    let mut result = ScanResult {
+        xlen: elf.xlen,
+        ..Default::default()
+    };
 
     for region in &elf.regions {
         scan_region(
@@ -166,44 +166,51 @@ mod tests {
         let sh_off = ((shstrtab_off + shstrtab.len() as u64) + 7) & !7;
 
         v.extend_from_slice(&[0x7f, b'E', b'L', b'F']);
-        v.push(2); v.push(1); v.push(1); v.push(0);
+        v.push(2);
+        v.push(1);
+        v.push(1);
+        v.push(0);
         v.extend_from_slice(&[0u8; 8]);
-        v.extend_from_slice(&2u16.to_le_bytes());   // e_type=ET_EXEC
+        v.extend_from_slice(&2u16.to_le_bytes()); // e_type=ET_EXEC
         v.extend_from_slice(&243u16.to_le_bytes()); // e_machine=EM_RISCV
-        v.extend_from_slice(&1u32.to_le_bytes());   // e_version
-        v.extend_from_slice(&0u64.to_le_bytes());   // e_entry
-        v.extend_from_slice(&0u64.to_le_bytes());   // e_phoff
+        v.extend_from_slice(&1u32.to_le_bytes()); // e_version
+        v.extend_from_slice(&0u64.to_le_bytes()); // e_entry
+        v.extend_from_slice(&0u64.to_le_bytes()); // e_phoff
         v.extend_from_slice(&sh_off.to_le_bytes()); // e_shoff
-        v.extend_from_slice(&0u32.to_le_bytes());   // e_flags
-        v.extend_from_slice(&64u16.to_le_bytes());  // e_ehsize
-        v.extend_from_slice(&56u16.to_le_bytes());  // e_phentsize
-        v.extend_from_slice(&0u16.to_le_bytes());   // e_phnum
-        v.extend_from_slice(&64u16.to_le_bytes());  // e_shentsize
-        v.extend_from_slice(&3u16.to_le_bytes());   // e_shnum
-        v.extend_from_slice(&2u16.to_le_bytes());   // e_shstrndx
+        v.extend_from_slice(&0u32.to_le_bytes()); // e_flags
+        v.extend_from_slice(&64u16.to_le_bytes()); // e_ehsize
+        v.extend_from_slice(&56u16.to_le_bytes()); // e_phentsize
+        v.extend_from_slice(&0u16.to_le_bytes()); // e_phnum
+        v.extend_from_slice(&64u16.to_le_bytes()); // e_shentsize
+        v.extend_from_slice(&3u16.to_le_bytes()); // e_shnum
+        v.extend_from_slice(&2u16.to_le_bytes()); // e_shstrndx
         assert_eq!(v.len(), 64);
 
         v.extend_from_slice(text);
-        while v.len() < shstrtab_off as usize { v.push(0); }
+        while v.len() < shstrtab_off as usize {
+            v.push(0);
+        }
         v.extend_from_slice(&shstrtab);
-        while v.len() < sh_off as usize { v.push(0); }
+        while v.len() < sh_off as usize {
+            v.push(0);
+        }
 
         // null shdr
         v.extend_from_slice(&[0u8; 64]);
         // .text shdr
         let text_flags: u64 = 6; // SHF_ALLOC | SHF_EXECINSTR
-        v.extend_from_slice(&1u32.to_le_bytes());           // sh_name
-        v.extend_from_slice(&1u32.to_le_bytes());           // sh_type=PROGBITS
+        v.extend_from_slice(&1u32.to_le_bytes()); // sh_name
+        v.extend_from_slice(&1u32.to_le_bytes()); // sh_type=PROGBITS
         v.extend_from_slice(&text_flags.to_le_bytes());
-        v.extend_from_slice(&text_off.to_le_bytes());       // sh_addr
-        v.extend_from_slice(&text_off.to_le_bytes());       // sh_offset
+        v.extend_from_slice(&text_off.to_le_bytes()); // sh_addr
+        v.extend_from_slice(&text_off.to_le_bytes()); // sh_offset
         v.extend_from_slice(&(text.len() as u64).to_le_bytes());
         v.extend_from_slice(&[0u8; 24]);
         // .shstrtab shdr
-        v.extend_from_slice(&7u32.to_le_bytes());           // sh_name
-        v.extend_from_slice(&3u32.to_le_bytes());           // sh_type=STRTAB
+        v.extend_from_slice(&7u32.to_le_bytes()); // sh_name
+        v.extend_from_slice(&3u32.to_le_bytes()); // sh_type=STRTAB
         v.extend_from_slice(&0u64.to_le_bytes());
-        v.extend_from_slice(&0u64.to_le_bytes());           // sh_addr
+        v.extend_from_slice(&0u64.to_le_bytes()); // sh_addr
         v.extend_from_slice(&shstrtab_off.to_le_bytes());
         v.extend_from_slice(&(shstrtab.len() as u64).to_le_bytes());
         v.extend_from_slice(&[0u8; 24]);

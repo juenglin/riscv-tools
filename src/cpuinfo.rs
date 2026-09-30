@@ -59,17 +59,32 @@ pub fn parse_isa_string(s: &str) -> ExtSet {
         for ch in alpha.chars() {
             match ch {
                 'i' | 'e' => {} // base ISA, always present
-                'm' => { exts.insert(Ext::M); }
-                'a' => { exts.insert(Ext::A); }
-                'f' => { exts.insert(Ext::F); exts.insert(Ext::Zicsr); }
-                'd' => { exts.insert(Ext::D); exts.insert(Ext::Zicsr); }
-                'c' => { exts.insert(Ext::Zca); exts.insert(Ext::Zcd); }
+                'm' => {
+                    exts.insert(Ext::M);
+                }
+                'a' => {
+                    exts.insert(Ext::A);
+                }
+                'f' => {
+                    exts.insert(Ext::F);
+                    exts.insert(Ext::Zicsr);
+                }
+                'd' => {
+                    exts.insert(Ext::D);
+                    exts.insert(Ext::Zicsr);
+                }
+                'c' => {
+                    exts.insert(Ext::Zca);
+                    exts.insert(Ext::Zcd);
+                }
                 'b' => {
                     exts.insert(Ext::Zba);
                     exts.insert(Ext::Zbb);
                     exts.insert(Ext::Zbs);
                 }
-                'v' => { exts.insert(Ext::V); }
+                'v' => {
+                    exts.insert(Ext::V);
+                }
                 'g' => {
                     // G = IMAFD + Zicsr + Zifencei
                     exts.insert(Ext::M);
@@ -79,7 +94,9 @@ pub fn parse_isa_string(s: &str) -> ExtSet {
                     exts.insert(Ext::Zicsr);
                     exts.insert(Ext::Zifencei);
                 }
-                'h' => { exts.insert(Ext::Sha); }
+                'h' => {
+                    exts.insert(Ext::Sha);
+                }
                 _ => {} // unknown single letter
             }
         }
@@ -167,10 +184,9 @@ fn apply_multiext(name: &str, exts: &mut ExtSet) {
         "zvfhmin" => exts.insert(Ext::Zvfhmin),
         "zvfh" => exts.insert(Ext::Zvfhmin), // Zvfh implies Zvfhmin
         "zvbb" => exts.insert(Ext::Zvbb),
-        "supm" | "ssnpm" | "sscofpmf" | "sscounterenw" | "ssccptr"
-        | "sstvecd" | "sstvala" | "svbare" | "sv39" | "sv48" | "sv57"
-        | "svade" | "svnapot" | "svpbmt" | "svinval" | "svadu" | "svvptc"
-        | "sstc" | "ssu64xl" | "ssstrict" => {
+        "supm" | "ssnpm" | "sscofpmf" | "sscounterenw" | "ssccptr" | "sstvecd" | "sstvala"
+        | "svbare" | "sv39" | "sv48" | "sv57" | "svade" | "svnapot" | "svpbmt" | "svinval"
+        | "svadu" | "svvptc" | "sstc" | "ssu64xl" | "ssstrict" => {
             // Supervisor/hypervisor platform extensions — noted but not mapped
             // to instruction-bearing ExtSet bits here (scan.rs handles them
             // from instruction patterns).
@@ -220,7 +236,9 @@ mod tests {
 
     #[test]
     fn parse_with_underscore_exts() {
-        let s = parse_isa_string("rv64gc_zba_zbb_zbs_v_zvfhmin_zvbb_zicond_zimop_zcmop_zcb_zfa_zawrs_zfhmin");
+        let s = parse_isa_string(
+            "rv64gc_zba_zbb_zbs_v_zvfhmin_zvbb_zicond_zimop_zcmop_zcb_zfa_zawrs_zfhmin",
+        );
         assert!(s.contains(Ext::Zba));
         assert!(s.contains(Ext::Zbb));
         assert!(s.contains(Ext::Zbs));

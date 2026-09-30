@@ -38,7 +38,7 @@ const EXT_ZKNE: u64 = 1 << 12;
 const EXT_ZKNH: u64 = 1 << 13;
 const EXT_ZKSED: u64 = 1 << 14;
 const EXT_ZKSH: u64 = 1 << 15;
-const _EXT_ZKT: u64 = 1 << 16;  // behavioral, not mapped to an Ext variant
+const _EXT_ZKT: u64 = 1 << 16; // behavioral, not mapped to an Ext variant
 const EXT_ZVBB: u64 = 1 << 17;
 const _EXT_ZVBC: u64 = 1 << 18; // Zbc handles this via cpuinfo
 const EXT_ZIHINTNTL: u64 = 1 << 27;
@@ -111,28 +111,72 @@ pub fn ima_ext_0_to_extset(bits: u64) -> ExtSet {
     if bits & IMA_V != 0 {
         s.insert(Ext::V);
     }
-    if bits & EXT_ZBA != 0 { s.insert(Ext::Zba); }
-    if bits & EXT_ZBB != 0 { s.insert(Ext::Zbb); }
-    if bits & EXT_ZBS != 0 { s.insert(Ext::Zbs); }
-    if bits & EXT_ZICBOZ != 0 { s.insert(Ext::Zicboz); }
-    if bits & EXT_ZBC != 0 { s.insert(Ext::Zbc); }
-    if bits & EXT_ZBKB != 0 { s.insert(Ext::Zbkb); }
-    if bits & EXT_ZBKC != 0 { s.insert(Ext::Zbkc); }
-    if bits & EXT_ZBKX != 0 { s.insert(Ext::Zbkx); }
-    if bits & EXT_ZKND != 0 { s.insert(Ext::Zknd); }
-    if bits & EXT_ZKNE != 0 { s.insert(Ext::Zkne); }
-    if bits & EXT_ZKNH != 0 { s.insert(Ext::Zknh); }
-    if bits & EXT_ZKSED != 0 { s.insert(Ext::Zksed); }
-    if bits & EXT_ZKSH != 0 { s.insert(Ext::Zksh); }
-    if bits & EXT_ZVBB != 0 { s.insert(Ext::Zvbb); }
-    if bits & EXT_ZIHINTNTL != 0 { s.insert(Ext::Zihintntl); }
-    if bits & EXT_ZICOND != 0 { s.insert(Ext::Zicond); }
-    if bits & EXT_ZIFENCEI != 0 { s.insert(Ext::Zifencei); }
-    if bits & EXT_ZCA != 0 { s.insert(Ext::Zca); }
-    if bits & EXT_ZCB != 0 { s.insert(Ext::Zcb); }
-    if bits & EXT_ZCD != 0 { s.insert(Ext::Zcd); }
-    if bits & EXT_ZCMOP != 0 { s.insert(Ext::Zcmop); }
-    if bits & EXT_ZAWRS != 0 { s.insert(Ext::Zawrs); }
+    if bits & EXT_ZBA != 0 {
+        s.insert(Ext::Zba);
+    }
+    if bits & EXT_ZBB != 0 {
+        s.insert(Ext::Zbb);
+    }
+    if bits & EXT_ZBS != 0 {
+        s.insert(Ext::Zbs);
+    }
+    if bits & EXT_ZICBOZ != 0 {
+        s.insert(Ext::Zicboz);
+    }
+    if bits & EXT_ZBC != 0 {
+        s.insert(Ext::Zbc);
+    }
+    if bits & EXT_ZBKB != 0 {
+        s.insert(Ext::Zbkb);
+    }
+    if bits & EXT_ZBKC != 0 {
+        s.insert(Ext::Zbkc);
+    }
+    if bits & EXT_ZBKX != 0 {
+        s.insert(Ext::Zbkx);
+    }
+    if bits & EXT_ZKND != 0 {
+        s.insert(Ext::Zknd);
+    }
+    if bits & EXT_ZKNE != 0 {
+        s.insert(Ext::Zkne);
+    }
+    if bits & EXT_ZKNH != 0 {
+        s.insert(Ext::Zknh);
+    }
+    if bits & EXT_ZKSED != 0 {
+        s.insert(Ext::Zksed);
+    }
+    if bits & EXT_ZKSH != 0 {
+        s.insert(Ext::Zksh);
+    }
+    if bits & EXT_ZVBB != 0 {
+        s.insert(Ext::Zvbb);
+    }
+    if bits & EXT_ZIHINTNTL != 0 {
+        s.insert(Ext::Zihintntl);
+    }
+    if bits & EXT_ZICOND != 0 {
+        s.insert(Ext::Zicond);
+    }
+    if bits & EXT_ZIFENCEI != 0 {
+        s.insert(Ext::Zifencei);
+    }
+    if bits & EXT_ZCA != 0 {
+        s.insert(Ext::Zca);
+    }
+    if bits & EXT_ZCB != 0 {
+        s.insert(Ext::Zcb);
+    }
+    if bits & EXT_ZCD != 0 {
+        s.insert(Ext::Zcd);
+    }
+    if bits & EXT_ZCMOP != 0 {
+        s.insert(Ext::Zcmop);
+    }
+    if bits & EXT_ZAWRS != 0 {
+        s.insert(Ext::Zawrs);
+    }
 
     s
 }
@@ -141,9 +185,10 @@ pub fn ima_ext_0_to_extset(bits: u64) -> ExtSet {
 ///
 /// Returns `None` if the syscall is unavailable or returns an error.
 pub fn query() -> Option<ExtSet> {
-    let mut pairs = [
-        HwprobeKv { key: KEY_IMA_EXT_0, value: 0 },
-    ];
+    let mut pairs = [HwprobeKv {
+        key: KEY_IMA_EXT_0,
+        value: 0,
+    }];
     let ret = riscv_hwprobe(&mut pairs, 0, std::ptr::null(), 0);
     if ret != 0 {
         return None;
@@ -201,9 +246,19 @@ mod tests {
     #[test]
     fn all_rva23_bits() {
         // Simulate a full RVA23 hwprobe response.
-        let bits = IMA_FD | IMA_C | IMA_V | EXT_ZBA | EXT_ZBB | EXT_ZBS
-            | EXT_ZICBOZ | EXT_ZVBB | EXT_ZICOND | EXT_ZCMOP | EXT_ZCB
-            | EXT_ZAWRS | EXT_ZIFENCEI;
+        let bits = IMA_FD
+            | IMA_C
+            | IMA_V
+            | EXT_ZBA
+            | EXT_ZBB
+            | EXT_ZBS
+            | EXT_ZICBOZ
+            | EXT_ZVBB
+            | EXT_ZICOND
+            | EXT_ZCMOP
+            | EXT_ZCB
+            | EXT_ZAWRS
+            | EXT_ZIFENCEI;
         let s = ima_ext_0_to_extset(bits);
         assert!(s.contains(Ext::V));
         assert!(s.contains(Ext::Zvbb));

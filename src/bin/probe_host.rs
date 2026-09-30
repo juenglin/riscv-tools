@@ -9,10 +9,18 @@ use clap::Parser;
 
 // Only needed on the actual RISC-V target.
 #[cfg(target_arch = "riscv64")]
-use riscv_tools::{cpuinfo, ext::{Ext, ExtSet}, hwprobe, profile::largest_supported};
+use riscv_tools::{
+    cpuinfo,
+    ext::{Ext, ExtSet},
+    hwprobe,
+    profile::largest_supported,
+};
 
 #[derive(Parser)]
-#[command(name = "probe-host", about = "Report the largest RISC-V profile this CPU supports")]
+#[command(
+    name = "probe-host",
+    about = "Report the largest RISC-V profile this CPU supports"
+)]
 struct Args {
     /// Print extension sources and raw extension bitmasks
     #[arg(short, long)]
@@ -63,7 +71,10 @@ fn probe_and_report(verbose: bool) {
 
     // ── S64 profile (best-effort) ─────────────────────────────────────────────
 
-    let S64Result { verified, unverified } = build_s64_exts(&host_exts);
+    let S64Result {
+        verified,
+        unverified,
+    } = build_s64_exts(&host_exts);
     let s64_profiles = largest_supported(&verified, 64, true);
     let s64_name = profile_names(&s64_profiles).unwrap_or_else(|| "RVI20U64".into());
 
@@ -97,9 +108,14 @@ fn build_s64_exts(u64_exts: &ExtSet) -> S64Result {
     }
 
     // Pick up any additional S-mode extensions from cpuinfo.
-    if cpuinfo_exts.contains(Ext::Zvfhmin) { verified.insert(Ext::Zvfhmin); }
+    if cpuinfo_exts.contains(Ext::Zvfhmin) {
+        verified.insert(Ext::Zvfhmin);
+    }
 
-    S64Result { verified, unverified }
+    S64Result {
+        verified,
+        unverified,
+    }
 }
 
 #[cfg(target_arch = "riscv64")]
@@ -107,6 +123,12 @@ fn profile_names(profiles: &[&riscv_tools::profile::Profile]) -> Option<String> 
     if profiles.is_empty() {
         None
     } else {
-        Some(profiles.iter().map(|p| p.name).collect::<Vec<_>>().join(", "))
+        Some(
+            profiles
+                .iter()
+                .map(|p| p.name)
+                .collect::<Vec<_>>()
+                .join(", "),
+        )
     }
 }

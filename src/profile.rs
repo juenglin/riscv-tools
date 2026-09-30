@@ -7,7 +7,7 @@
 //! bearing extensions only; behavioral extensions (Ziccif, Zic64b, Za64rs,
 //! Zkt, …) are excluded.
 
-use crate::ext::{Ext, ExtSet, extset};
+use crate::ext::{extset, Ext, ExtSet};
 
 /// Privilege mode for a profile (U = user, S = supervisor).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,8 +51,16 @@ const MAND_RVI20U32: ExtSet = ExtSet::empty();
 const MAND_RVI20U64: ExtSet = ExtSet::empty();
 
 /// RVA20U64 adds M, A, F, D, C (= Zca+Zcd for RV64), Zicsr, Zicntr.
-const MAND_RVA20U64: ExtSet =
-    extset!(Ext::M, Ext::A, Ext::F, Ext::D, Ext::Zca, Ext::Zcd, Ext::Zicsr, Ext::Zicntr);
+const MAND_RVA20U64: ExtSet = extset!(
+    Ext::M,
+    Ext::A,
+    Ext::F,
+    Ext::D,
+    Ext::Zca,
+    Ext::Zcd,
+    Ext::Zicsr,
+    Ext::Zicntr
+);
 
 /// RVA20S64 = RVA20U64 + Zifencei.
 const MAND_RVA20S64: ExtSet = ExtSet(MAND_RVA20U64.0 | extset!(Ext::Zifencei).0);
@@ -61,7 +69,16 @@ const MAND_RVA20S64: ExtSet = ExtSet(MAND_RVA20U64.0 | extset!(Ext::Zifencei).0)
 /// (Zihintpause, Zicbop, Zic64b, Zkt, Za64rs are behavioral/hint — excluded.)
 const MAND_RVA22U64: ExtSet = ExtSet(
     MAND_RVA20U64.0
-        | extset!(Ext::Zba, Ext::Zbb, Ext::Zbs, Ext::Zihpm, Ext::Zicbom, Ext::Zicboz, Ext::Zfhmin).0,
+        | extset!(
+            Ext::Zba,
+            Ext::Zbb,
+            Ext::Zbs,
+            Ext::Zihpm,
+            Ext::Zicbom,
+            Ext::Zicboz,
+            Ext::Zfhmin
+        )
+        .0,
 );
 
 /// RVA22S64 = RVA22U64 + Zifencei.
@@ -86,8 +103,7 @@ const MAND_RVA23U64: ExtSet = ExtSet(
 );
 
 /// RVA23S64 = RVA23U64 + Zifencei + Sha (H-extension mandatory).
-const MAND_RVA23S64: ExtSet =
-    ExtSet(MAND_RVA23U64.0 | extset!(Ext::Zifencei, Ext::Sha).0);
+const MAND_RVA23S64: ExtSet = ExtSet(MAND_RVA23U64.0 | extset!(Ext::Zifencei, Ext::Sha).0);
 
 /// RVB23U64 = RVA20U64 + B, Zihpm, Zicbom, Zicboz + Zicond, Zimop, Zcmop, Zcb, Zfa, Zawrs.
 /// Notably NOT Zfhmin (optional in RVB23), NOT V/Zvfhmin/Zvbb.
@@ -214,7 +230,11 @@ pub fn smallest_containing(
 
 /// Find the **largest** profiles whose mandatory set is a **subset** of
 /// `host_exts` — i.e. the profiles the host provably supports.
-pub fn largest_supported(host_exts: &ExtSet, xlen: u8, has_supervisor: bool) -> Vec<&'static Profile> {
+pub fn largest_supported(
+    host_exts: &ExtSet,
+    xlen: u8,
+    has_supervisor: bool,
+) -> Vec<&'static Profile> {
     let candidates: Vec<&'static Profile> = PROFILES
         .iter()
         .filter(|p| {
@@ -240,7 +260,9 @@ fn minimal_elements<'a>(profiles: &[&'a Profile]) -> Vec<&'a Profile> {
         .filter(|&p| {
             // p is minimal if no other q in the set satisfies q < p
             !profiles.iter().copied().any(|q| {
-                !std::ptr::eq(q, p) && q.mandatory.is_subset_of(&p.mandatory) && q.mandatory != p.mandatory
+                !std::ptr::eq(q, p)
+                    && q.mandatory.is_subset_of(&p.mandatory)
+                    && q.mandatory != p.mandatory
             })
         })
         .collect()
@@ -254,7 +276,9 @@ fn maximal_elements<'a>(profiles: &[&'a Profile]) -> Vec<&'a Profile> {
         .copied()
         .filter(|&p| {
             !profiles.iter().copied().any(|q| {
-                !std::ptr::eq(q, p) && p.mandatory.is_subset_of(&q.mandatory) && p.mandatory != q.mandatory
+                !std::ptr::eq(q, p)
+                    && p.mandatory.is_subset_of(&q.mandatory)
+                    && p.mandatory != q.mandatory
             })
         })
         .collect()
@@ -265,7 +289,10 @@ mod tests {
     use super::*;
 
     fn profile(name: &str) -> &'static Profile {
-        PROFILES.iter().find(|p| p.name == name).unwrap_or_else(|| panic!("unknown profile {name}"))
+        PROFILES
+            .iter()
+            .find(|p| p.name == name)
+            .unwrap_or_else(|| panic!("unknown profile {name}"))
     }
 
     // ── Partial-order correctness (agreed examples from planning) ──────────
@@ -321,7 +348,16 @@ mod tests {
 
     #[test]
     fn smallest_containing_mafd_is_rva20u64() {
-        let used = extset!(Ext::M, Ext::A, Ext::F, Ext::D, Ext::Zca, Ext::Zcd, Ext::Zicsr, Ext::Zicntr);
+        let used = extset!(
+            Ext::M,
+            Ext::A,
+            Ext::F,
+            Ext::D,
+            Ext::Zca,
+            Ext::Zcd,
+            Ext::Zicsr,
+            Ext::Zicntr
+        );
         let res = smallest_containing(&used, 64, false, false);
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].name, "RVA20U64");
@@ -359,7 +395,14 @@ mod tests {
     fn smallest_containing_supervisor_zifencei() {
         // A binary using only Zifencei with supervisor mode needs RVA20S64.
         let used = extset!(
-            Ext::M, Ext::A, Ext::F, Ext::D, Ext::Zca, Ext::Zcd, Ext::Zicsr, Ext::Zicntr,
+            Ext::M,
+            Ext::A,
+            Ext::F,
+            Ext::D,
+            Ext::Zca,
+            Ext::Zcd,
+            Ext::Zicsr,
+            Ext::Zicntr,
             Ext::Zifencei
         );
         let res = smallest_containing(&used, 64, true, false);
@@ -383,7 +426,10 @@ mod tests {
         let used = extset!(Ext::Zbc);
         let res = smallest_containing(&used, 64, false, false);
         // Zbc is NOT mandatory in any U64 profile → empty result.
-        assert!(res.is_empty(), "Zbc is not mandatory in any profile; got {res:?}");
+        assert!(
+            res.is_empty(),
+            "Zbc is not mandatory in any profile; got {res:?}"
+        );
     }
 
     // ── largest_supported ─────────────────────────────────────────────────

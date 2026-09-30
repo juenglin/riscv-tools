@@ -7,8 +7,11 @@ pub mod csr;
 pub mod tables;
 
 use crate::ext::{Ext, ExtSet};
-use csr::{CsrInfo, classify_csr};
-use tables::{INSNS_16, INSNS_32, is_custom_opcode, is_vector_extended_load_store, system_privilege, SystemPriv};
+use csr::{classify_csr, CsrInfo};
+use tables::{
+    is_custom_opcode, is_vector_extended_load_store, system_privilege, SystemPriv, INSNS_16,
+    INSNS_32,
+};
 
 /// Result of decoding one instruction word.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,7 +70,11 @@ pub fn decode_32(word: u32) -> DecodeResult {
         if matches!(funct3, 1 | 2 | 3 | 5 | 6 | 7) {
             let csr_num = ((word >> 20) & 0xfff) as u16;
             let csr_info = classify_csr(csr_num);
-            return DecodeResult::Csr { csr_num, csr_info, is_hint: false };
+            return DecodeResult::Csr {
+                csr_num,
+                csr_info,
+                is_hint: false,
+            };
         }
         // funct3=0: privileged / ecall / ebreak / mop.*
         // funct3=4: Zimop (handled in table)
@@ -105,7 +112,10 @@ pub fn decode_32(word: u32) -> DecodeResult {
         if matched_exts.is_empty() && !all_hint {
             return DecodeResult::Base;
         }
-        return DecodeResult::Extension { exts: matched_exts, is_hint: all_hint };
+        return DecodeResult::Extension {
+            exts: matched_exts,
+            is_hint: all_hint,
+        };
     }
 
     // ── Vector extended-width (mew=1) load/store — not in static table ────
@@ -116,7 +126,10 @@ pub fn decode_32(word: u32) -> DecodeResult {
     if is_vector_extended_load_store(word) {
         let mut exts = ExtSet::empty();
         exts.insert(Ext::V);
-        return DecodeResult::Extension { exts, is_hint: false };
+        return DecodeResult::Extension {
+            exts,
+            is_hint: false,
+        };
     }
 
     // ── Custom opcode → unknown ───────────────────────────────────────────
@@ -157,7 +170,10 @@ pub fn decode_16(hw: u16) -> DecodeResult {
         if matched_exts.is_empty() && !all_hint {
             return DecodeResult::Base;
         }
-        return DecodeResult::Extension { exts: matched_exts, is_hint: all_hint };
+        return DecodeResult::Extension {
+            exts: matched_exts,
+            is_hint: all_hint,
+        };
     }
 
     // Unknown compressed encoding (reserved or unimplemented extension).
@@ -177,7 +193,10 @@ mod tests {
                 }
             }
             DecodeResult::Base => {
-                assert!(expected.is_empty(), "word={word:#010x}: got Base, expected {expected:?}");
+                assert!(
+                    expected.is_empty(),
+                    "word={word:#010x}: got Base, expected {expected:?}"
+                );
             }
             other => panic!("word={word:#010x}: unexpected result {other:?}"),
         }
@@ -345,7 +364,8 @@ mod tests {
     fn rev8() {
         // rev8 x1, x2 = bits[31:25]=0110101 (funct6=011010,funct1=1), rs2=11000, funct3=101, OP-IMM
         // bits[31:25] = 0b0110101 = 0x35 (NOT 0x6b which would be 1101011)
-        let word: u32 = (0x35u32 << 25) | (0x18 << 20) | (2 << 15) | (0b101 << 12) | (1 << 7) | 0x13;
+        let word: u32 =
+            (0x35u32 << 25) | (0x18 << 20) | (2 << 15) | (0b101 << 12) | (1 << 7) | 0x13;
         // Sanity check: should produce 0x6b81_5093
         assert_eq!(word, 0x6b81_5093, "rev8 encoding sanity check");
         let r = decode_32(word);
@@ -387,8 +407,14 @@ mod tests {
     fn mop_r_0() {
         // mop.r.0 x1 = bit31=1, bits[30:26]=00000, bit25=1, rs2=00000, rs1=00000,
         // funct3=100, rd=x1=1, opcode=0x73.  All fields shown explicitly.
-        let word: u32 = (1u32 << 31) | (0 << 26) | (1u32 << 25) | (0 << 20) | (0 << 15)
-            | (0b100 << 12) | (1 << 7) | 0x73;
+        let word: u32 = (1u32 << 31)
+            | (0 << 26)
+            | (1u32 << 25)
+            | (0 << 20)
+            | (0 << 15)
+            | (0b100 << 12)
+            | (1 << 7)
+            | 0x73;
         expect_ext(word, &[Ext::Zimop]);
     }
 

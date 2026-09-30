@@ -4,8 +4,8 @@
 //! `.riscv.attributes` section from a RISC-V ELF binary.
 
 use object::{
-    Architecture, Endianness, Object, ObjectSection, ObjectSegment, ObjectSymbol,
-    SectionKind, SegmentFlags, SymbolSection,
+    Architecture, Endianness, Object, ObjectSection, ObjectSegment, ObjectSymbol, SectionKind,
+    SegmentFlags, SymbolSection,
 };
 
 use crate::error::AppError;
@@ -60,8 +60,7 @@ pub fn parse(bytes: &[u8]) -> Result<ElfInfo, AppError> {
         return Err(AppError::BigEndian);
     }
 
-    let file = object::File::parse(bytes)
-        .map_err(|e| AppError::Corrupt(e.to_string()))?;
+    let file = object::File::parse(bytes).map_err(|e| AppError::Corrupt(e.to_string()))?;
 
     if file.endianness() != Endianness::Little {
         return Err(AppError::BigEndian);
@@ -155,7 +154,11 @@ pub fn parse(bytes: &[u8]) -> Result<ElfInfo, AppError> {
             .unwrap_or(0);
         let offset = sym.address().saturating_sub(section_vaddr);
 
-        mapping.push(MappingSymbol { section_idx, offset, is_code });
+        mapping.push(MappingSymbol {
+            section_idx,
+            offset,
+            is_code,
+        });
     }
 
     mapping.sort_by_key(|m| (m.section_idx, m.offset));
@@ -167,7 +170,12 @@ pub fn parse(bytes: &[u8]) -> Result<ElfInfo, AppError> {
         .and_then(|s| s.data().ok())
         .map(|d| d.to_vec());
 
-    Ok(ElfInfo { xlen, regions, mapping, riscv_attributes })
+    Ok(ElfInfo {
+        xlen,
+        regions,
+        mapping,
+        riscv_attributes,
+    })
 }
 
 // ── Mapping-symbol helper ─────────────────────────────────────────────────────
@@ -203,46 +211,50 @@ mod tests {
         v.push(1); // EV_CURRENT
         v.push(0); // ELFOSABI_NONE
         v.extend_from_slice(&[0u8; 8]); // padding
-        // e_type=ET_EXEC, e_machine=EM_RISCV
+                                        // e_type=ET_EXEC, e_machine=EM_RISCV
         v.extend_from_slice(&2u16.to_le_bytes());
         v.extend_from_slice(&243u16.to_le_bytes());
-        v.extend_from_slice(&1u32.to_le_bytes());   // e_version
-        v.extend_from_slice(&0u64.to_le_bytes());   // e_entry
-        v.extend_from_slice(&0u64.to_le_bytes());   // e_phoff (none)
+        v.extend_from_slice(&1u32.to_le_bytes()); // e_version
+        v.extend_from_slice(&0u64.to_le_bytes()); // e_entry
+        v.extend_from_slice(&0u64.to_le_bytes()); // e_phoff (none)
         v.extend_from_slice(&sh_off.to_le_bytes()); // e_shoff
-        v.extend_from_slice(&0u32.to_le_bytes());   // e_flags
-        v.extend_from_slice(&64u16.to_le_bytes());  // e_ehsize
-        v.extend_from_slice(&56u16.to_le_bytes());  // e_phentsize
-        v.extend_from_slice(&0u16.to_le_bytes());   // e_phnum
-        v.extend_from_slice(&64u16.to_le_bytes());  // e_shentsize
-        v.extend_from_slice(&3u16.to_le_bytes());   // e_shnum
-        v.extend_from_slice(&2u16.to_le_bytes());   // e_shstrndx
+        v.extend_from_slice(&0u32.to_le_bytes()); // e_flags
+        v.extend_from_slice(&64u16.to_le_bytes()); // e_ehsize
+        v.extend_from_slice(&56u16.to_le_bytes()); // e_phentsize
+        v.extend_from_slice(&0u16.to_le_bytes()); // e_phnum
+        v.extend_from_slice(&64u16.to_le_bytes()); // e_shentsize
+        v.extend_from_slice(&3u16.to_le_bytes()); // e_shnum
+        v.extend_from_slice(&2u16.to_le_bytes()); // e_shstrndx
         assert_eq!(v.len(), 64);
 
         // Section data
         v.extend_from_slice(text);
-        while v.len() < shstrtab_off as usize { v.push(0); }
+        while v.len() < shstrtab_off as usize {
+            v.push(0);
+        }
         v.extend_from_slice(shstrtab);
-        while v.len() < sh_off as usize { v.push(0); }
+        while v.len() < sh_off as usize {
+            v.push(0);
+        }
 
         // Section headers (3 × 64 bytes)
         // [0] null
         v.extend_from_slice(&[0u8; 64]);
         // [1] .text
         let text_flags: u64 = 0x6; // SHF_ALLOC | SHF_EXECINSTR
-        v.extend_from_slice(&1u32.to_le_bytes());                     // sh_name
-        v.extend_from_slice(&1u32.to_le_bytes());                     // sh_type = SHT_PROGBITS
-        v.extend_from_slice(&text_flags.to_le_bytes());               // sh_flags
-        v.extend_from_slice(&text_off.to_le_bytes());                 // sh_addr
-        v.extend_from_slice(&text_off.to_le_bytes());                 // sh_offset
-        v.extend_from_slice(&(text.len() as u64).to_le_bytes());      // sh_size
-        v.extend_from_slice(&[0u8; 24]);                              // rest of shdr
-        // [2] .shstrtab
-        v.extend_from_slice(&7u32.to_le_bytes());                     // sh_name
-        v.extend_from_slice(&3u32.to_le_bytes());                     // sh_type = SHT_STRTAB
-        v.extend_from_slice(&0u64.to_le_bytes());                     // sh_flags
-        v.extend_from_slice(&0u64.to_le_bytes());                     // sh_addr
-        v.extend_from_slice(&shstrtab_off.to_le_bytes());             // sh_offset
+        v.extend_from_slice(&1u32.to_le_bytes()); // sh_name
+        v.extend_from_slice(&1u32.to_le_bytes()); // sh_type = SHT_PROGBITS
+        v.extend_from_slice(&text_flags.to_le_bytes()); // sh_flags
+        v.extend_from_slice(&text_off.to_le_bytes()); // sh_addr
+        v.extend_from_slice(&text_off.to_le_bytes()); // sh_offset
+        v.extend_from_slice(&(text.len() as u64).to_le_bytes()); // sh_size
+        v.extend_from_slice(&[0u8; 24]); // rest of shdr
+                                         // [2] .shstrtab
+        v.extend_from_slice(&7u32.to_le_bytes()); // sh_name
+        v.extend_from_slice(&3u32.to_le_bytes()); // sh_type = SHT_STRTAB
+        v.extend_from_slice(&0u64.to_le_bytes()); // sh_flags
+        v.extend_from_slice(&0u64.to_le_bytes()); // sh_addr
+        v.extend_from_slice(&shstrtab_off.to_le_bytes()); // sh_offset
         v.extend_from_slice(&(shstrtab.len() as u64).to_le_bytes()); // sh_size
         v.extend_from_slice(&[0u8; 24]);
 
@@ -294,9 +306,21 @@ mod tests {
     #[test]
     fn mapping_symbol_data_region() {
         let syms = vec![
-            MappingSymbol { section_idx: 1, offset: 0, is_code: true },
-            MappingSymbol { section_idx: 1, offset: 16, is_code: false },
-            MappingSymbol { section_idx: 1, offset: 32, is_code: true },
+            MappingSymbol {
+                section_idx: 1,
+                offset: 0,
+                is_code: true,
+            },
+            MappingSymbol {
+                section_idx: 1,
+                offset: 16,
+                is_code: false,
+            },
+            MappingSymbol {
+                section_idx: 1,
+                offset: 32,
+                is_code: true,
+            },
         ];
         assert!(is_code_at(&syms, 1, 0));
         assert!(is_code_at(&syms, 1, 15));
