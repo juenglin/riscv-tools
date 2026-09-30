@@ -1,0 +1,225 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    # No inputs – the version is read from Cargo.toml on the current branch.
+
+# Ensure only one release can run at a time; do not cancel a running one.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  TARGET: riscv64gc-unknown-linux-musl
+
+jobs:
+  # ── 1. Validate the version and verify the tag does not yet exist ─────────
+  prepare:
+    name: prepare
+    runs-on: ubuntu-latest
+    # Only allow releases from the main branch.
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+      tag: ${{ steps.semver.outputs.tag }}
+      prerelease: ${{ steps.semver.outputs.prerelease }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Read and validate version from Cargo.toml
+        id: semver
+        run: |
+          set -euo pipefail
+
+          VERSION=$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])")
+
+          # Validate strict semver: MAJOR.MINOR.PATCH with optional pre-release
+          # and build-metadata labels (RFC 2119 / semver.org).
+          SEMVER_RE='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
+          if ! echo "$VERSION" | grep -qE "$SEMVER_RE"; then
+            echo "::error::Cargo.toml version '$VERSION' is not valid semver."
+            exit 1
+          fi
+
+          TAG="v${VERSION}"
+
+          # Mark as pre-release when there is a pre-release label (e.g. 0.2.0-rc.1).
+          PRERELEASE=false
+          if echo "$VERSION" | grep -qE -- '-'; then
+            PRERELEASE=true
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}"         >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: ${VERSION}  tag: ${TAG}  prerelease: ${PRERELEASE}"
+
+      - name: Verify tag does not exist (idempotency guard)
+        env:
+          TAG: ${{ steps.semver.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Check the remote tag list.
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+            echo "::error::Tag '${TAG}' already exists. Bump the version in Cargo.toml first."
+            exit 1
+          fi
+
+          # Check the GitHub Releases API (belt-and-suspenders for race safety).
+          if gh release view "${TAG}" > /dev/null 2>&1; then
+            echo "::error::GitHub Release '${TAG}' already exists."
+            exit 1
+          fi
+
+          echo "Tag '${TAG}' is available."
+
+  # ── 2. Build, test, package ───────────────────────────────────────────────
+  build:
+    name: build
+    needs: prepare
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain + riscv target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: ${{ env.TARGET }}
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install qemu-user-static
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends qemu-user-static
+
+      # Full quality gates before shipping.
+      - name: make check
+        run: make check
+
+      - name: make test
+        run: make test
+
+      # Cross-compile the release binaries.
+      - name: make build
+        run: make build
+
+      # Verify the binaries are truly statically linked (no dynamic interpreter).
+      - name: Verify static binaries
+        run: |
+          set -euo pipefail
+          for bin in probe-binary probe-host; do
+            ELF="target/${TARGET}/release/${bin}"
+            echo "--- $ELF ---"
+            file "$ELF"
+            # Must NOT contain a dynamic interpreter entry (PT_INTERP segment).
+            if file "$ELF" | grep -q 'dynamically linked'; then
+              echo "::error::${bin} is not statically linked!"
+              exit 1
+            fi
+            echo "${bin}: OK (statically linked)"
+          done
+
+      # Smoke-test under qemu-riscv64-static.
+      - name: Smoke-test binaries under qemu
+        run: |
+          set -euo pipefail
+          qemu-riscv64-static target/${TARGET}/release/probe-binary --help
+          # probe-host --help works on any arch; --version also acceptable.
+          qemu-riscv64-static target/${TARGET}/release/probe-host --help || \
+          qemu-riscv64-static target/${TARGET}/release/probe-host --version
+
+      # Package the artifacts.
+      - name: Package tar.gz
+        run: |
+          set -euo pipefail
+          ARCHIVE="riscv-tools-${TAG}-${TARGET}.tar.gz"
+          mkdir -p "dist/${ARCHIVE%.tar.gz}"
+          cp target/${TARGET}/release/probe-binary \
+             target/${TARGET}/release/probe-host \
+             README.md \
+             "dist/${ARCHIVE%.tar.gz}/"
+          # Include a LICENSE file if one exists.
+          for f in LICENSE LICENSE-* COPYING; do
+            [ -f "$f" ] && cp "$f" "dist/${ARCHIVE%.tar.gz}/" || true
+          done
+          (cd dist && tar czf "../${ARCHIVE}" "${ARCHIVE%.tar.gz}")
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Generate SHA256SUMS
+        run: sha256sum "$ARCHIVE" > SHA256SUMS
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: |
+            ${{ env.ARCHIVE }}
+            SHA256SUMS
+          if-no-files-found: error
+
+  # ── 3. Create the tag and GitHub Release ─────────────────────────────────
+  publish:
+    name: publish
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: dist/
+
+      - name: Re-check tag is still absent (race guard)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+            echo "::error::Tag '${TAG}' appeared between prepare and publish. Aborting."
+            exit 1
+          fi
+          if gh release view "${TAG}" > /dev/null 2>&1; then
+            echo "::error::GitHub Release '${TAG}' appeared between prepare and publish. Aborting."
+            exit 1
+          fi
+
+      - name: Create GitHub Release and upload assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          PRERELEASE_FLAG=""
+          [ "${PRERELEASE}" = "true" ] && PRERELEASE_FLAG="--prerelease"
+
+          gh release create "${TAG}" \
+            --target "${{ github.sha }}" \
+            --title "${TAG}" \
+            --generate-notes \
+            ${PRERELEASE_FLAG} \
+            dist/*
