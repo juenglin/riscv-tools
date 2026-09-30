@@ -1,12 +1,18 @@
 TARGET := riscv64gc-unknown-linux-musl
+VENV   ?= .venv
 
-.PHONY: all check test build clean
+.PHONY: all check fmt test build test-riscv fixtures setup clean
 
 all: check test
 
-## Run clippy (hard-errors on any warning) and the full test suite.
+## Run rustfmt check then clippy; hard-errors on any warning or format diff.
 check:
+	cargo fmt --check
 	cargo clippy --all-targets -- -D warnings
+
+## Apply rustfmt in place.
+fmt:
+	cargo fmt
 
 test:
 	cargo test
@@ -23,6 +29,15 @@ test-riscv:
 fixtures:
 	bash scripts/build-fixtures.sh
 
+## Create .venv, install pre-commit, and install the git hook.
+## Re-running is safe and refreshes pins and the hook.
+## Requires cargo on PATH (run: . "$$HOME/.cargo/env" first).
+setup:
+	python3 -m venv $(VENV)
+	$(VENV)/bin/pip install --quiet --upgrade pip
+	$(VENV)/bin/pip install --quiet -r requirements-dev.txt
+	$(VENV)/bin/pre-commit install --install-hooks
+
 clean:
 	cargo clean
-	rm -f fixtures/*.o fixtures/*.elf fixtures/*.bin
+	rm -f fixtures/*.o fixtures/*.elf
