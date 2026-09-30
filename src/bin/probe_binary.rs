@@ -1,3 +1,4 @@
+#![deny(clippy::all)]
 //! `probe-binary` — smallest RISC-V profile containing all instructions in an ELF.
 //!
 //! Exit codes: 0 ok · 1 I/O · 2 not ELF · 3 not RISC-V · 4 unsupported · 5 no profile

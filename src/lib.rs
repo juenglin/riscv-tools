@@ -1,3 +1,5 @@
+#![deny(clippy::all)]
+
 pub mod cpuinfo;
 pub mod elf;
 pub mod error;

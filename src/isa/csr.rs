@@ -21,15 +21,15 @@ pub enum CsrInfo {
 pub fn classify_csr(csr: u16) -> CsrInfo {
     match csr {
         // Floating-point status/rounding/flag CSRs (F extension)
-        0x001 | 0x002 | 0x003 => CsrInfo::Ext(Ext::F),
+        0x001..=0x003 => CsrInfo::Ext(Ext::F),
 
         // Vector CSRs (V extension)
         0x008 | 0x009 | 0x00A | 0x00F => CsrInfo::Ext(Ext::V),
-        0xC20 | 0xC21 | 0xC22 => CsrInfo::Ext(Ext::V),
+        0xC20..=0xC22 => CsrInfo::Ext(Ext::V),
 
         // Zicntr: unprivileged performance counters
-        0xC00 | 0xC01 | 0xC02 => CsrInfo::Ext(Ext::Zicntr), // cycle, time, instret
-        0xC80 | 0xC81 | 0xC82 => CsrInfo::Ext(Ext::Zicntr), // *h (RV32)
+        0xC00..=0xC02 => CsrInfo::Ext(Ext::Zicntr), // cycle, time, instret
+        0xC80..=0xC82 => CsrInfo::Ext(Ext::Zicntr), // *h (RV32)
 
         // Zihpm: hpmcounterN (3..31) and their RV32 high halves
         0xC03..=0xC1F => CsrInfo::Ext(Ext::Zihpm),

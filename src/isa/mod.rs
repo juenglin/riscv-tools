@@ -333,9 +333,10 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::identity_op)]
     fn clz() {
-        // clz x1, x2 = funct7=0110000, rs2=00000, funct3=001, OP = 0x60001093 (no: rd=x1)
-        // 0110000_00000_rs1_001_rd_0110011
+        // clz x1, x2 = funct7=0110000, rs2=00000, funct3=001, OP
+        // Show all fields explicitly for documentation: (0 << 20) = rs2=x0
         let word: u32 = (0x30 << 25) | (0 << 20) | (2 << 15) | (0b001 << 12) | (1 << 7) | 0x33;
         expect_ext(word, &[Ext::Zbb]);
     }
@@ -382,11 +383,10 @@ mod tests {
     // ── Zimop ─────────────────────────────────────────────────────────────
 
     #[test]
+    #[allow(clippy::identity_op)]
     fn mop_r_0() {
-        // mop.r.0 x1 = bit31=1, bits30:26=00000, bit25=1, rs2=00000, rs1=00000,
-        // funct3=100, rd=x1=1, opcode=0x73
-        let word: u32 = 0x8200_40d3; // bit31=1, bit25=1, funct3=100, rd=x1
-        // Recompute:
+        // mop.r.0 x1 = bit31=1, bits[30:26]=00000, bit25=1, rs2=00000, rs1=00000,
+        // funct3=100, rd=x1=1, opcode=0x73.  All fields shown explicitly.
         let word: u32 = (1u32 << 31) | (0 << 26) | (1u32 << 25) | (0 << 20) | (0 << 15)
             | (0b100 << 12) | (1 << 7) | 0x73;
         expect_ext(word, &[Ext::Zimop]);
@@ -437,9 +437,9 @@ mod tests {
     // ── CSR instructions ─────────────────────────────────────────────────
 
     #[test]
+    #[allow(clippy::identity_op)]
     fn csrrs_cycle() {
-        // csrrs x1, cycle, x0 = 0xc0002073 (funct3=010, csr=0xC00)
-        // rd=x1=1, rs1=x0=0, funct3=010, csr=0xC00
+        // csrrs x1, cycle, x0  (all fields shown explicitly; rs1=x0 → 0 << 15)
         let word: u32 = (0xC00 << 20) | (0 << 15) | (0b010 << 12) | (1 << 7) | 0x73;
         match decode_32(word) {
             DecodeResult::Csr { csr_info, .. } => {
@@ -450,8 +450,9 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::identity_op)]
     fn csrrw_vstart() {
-        // csrrw x0, vstart, x1 = funct3=001, csr=0x008
+        // csrrw x0, vstart, x1  (rd=x0 → 0 << 7 shown explicitly)
         let word: u32 = (0x008 << 20) | (1 << 15) | (0b001 << 12) | (0 << 7) | 0x73;
         match decode_32(word) {
             DecodeResult::Csr { csr_info, .. } => {

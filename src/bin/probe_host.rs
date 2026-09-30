@@ -1,3 +1,4 @@
+#![deny(clippy::all)]
 //! `probe-host` — largest RISC-V profile the current CPU supports.
 //!
 //! Reports a verifiable U64 profile line (from hwprobe / cpuinfo) and a
@@ -25,7 +26,6 @@ fn main() {
     {
         println!("not a RISC-V host");
         let _ = args;
-        return;
     }
 
     #[cfg(target_arch = "riscv64")]

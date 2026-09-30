@@ -177,8 +177,7 @@ pub fn parse(bytes: &[u8]) -> Result<ElfInfo, AppError> {
 pub fn is_code_at(mapping: &[MappingSymbol], section_idx: usize, offset: u64) -> bool {
     let last = mapping
         .iter()
-        .filter(|m| m.section_idx == section_idx && m.offset <= offset)
-        .last();
+        .rfind(|m| m.section_idx == section_idx && m.offset <= offset);
     last.map(|m| m.is_code).unwrap_or(true)
 }
 

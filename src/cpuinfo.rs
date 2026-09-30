@@ -170,13 +170,13 @@ fn apply_multiext(name: &str, exts: &mut ExtSet) {
         "supm" | "ssnpm" | "sscofpmf" | "sscounterenw" | "ssccptr"
         | "sstvecd" | "sstvala" | "svbare" | "sv39" | "sv48" | "sv57"
         | "svade" | "svnapot" | "svpbmt" | "svinval" | "svadu" | "svvptc"
-        | "sstc" | "ssu64xl" | "ssstrict" | "sha" => {
+        | "sstc" | "ssu64xl" | "ssstrict" => {
             // Supervisor/hypervisor platform extensions — noted but not mapped
             // to instruction-bearing ExtSet bits here (scan.rs handles them
             // from instruction patterns).
-            if name == "sha" {
-                exts.insert(Ext::Sha);
-            }
+        }
+        "sha" => {
+            exts.insert(Ext::Sha);
         }
         _ => {} // unknown extension — ignore
     }
