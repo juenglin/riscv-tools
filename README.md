@@ -72,6 +72,71 @@ The S64 line includes extensions that can't be fully verified from user space
 (notably `Sha` / H extension).  On non-RISC-V hosts it prints
 `not a RISC-V host` and exits 0.
 
+## Development
+
+### First-time setup
+
+```bash
+# Ensure Rust is on PATH (if installed via rustup with --no-modify-path)
+. "$HOME/.cargo/env"
+
+# Create .venv, install pinned pre-commit (4.6.2), and register the git hook
+make setup
+```
+
+`make setup` is idempotent – re-running it refreshes pins and the hook.
+
+The installed hook runs automatically before every `git commit`:
+
+| Hook | What it checks |
+|---|---|
+| File hygiene | trailing whitespace, EOF newline, line endings, YAML/TOML validity, merge markers, large files, private keys, shebangs |
+| `shellcheck` | all scripts under `scripts/` |
+| `actionlint` | `.github/workflows/*.yml` |
+| `cargo fmt --check` | Rust formatting (run `make fmt` to fix) |
+| `cargo clippy` | Rust lints (hard-errors on warnings) |
+
+Run all hooks manually on the whole tree:
+
+```bash
+.venv/bin/pre-commit run --all-files
+```
+
+### make targets
+
+| Target | Purpose |
+|---|---|
+| `make check` | `cargo fmt --check` + `cargo clippy -D warnings` |
+| `make fmt` | Apply `cargo fmt` in place |
+| `make test` | `cargo test` (host, no qemu needed) |
+| `make build` | Cross-compile for `riscv64gc-unknown-linux-musl` |
+| `make test-riscv` | `cargo test` via qemu-riscv64-static |
+| `make fixtures` | Build ELF fixtures with clang-18 |
+| `make setup` | Create `.venv`, install pre-commit, install the git hook |
+| `make clean` | Remove `target/` and generated fixture files |
+
+### Releasing
+
+1. Bump `version` in `Cargo.toml` (e.g. `0.1.0` → `0.2.0`) in a PR.
+2. Merge to `main`.
+3. Trigger the **Release** workflow:
+   ```bash
+   gh workflow run release.yml
+   # or: Actions tab → Release → Run workflow
+   ```
+
+The workflow:
+- Reads the version from `Cargo.toml`, validates it as strict semver.
+- Fails immediately if tag `vX.Y.Z` already exists (idempotency guarantee).
+- Runs `make check` and `make test`.
+- Cross-compiles for `riscv64gc-unknown-linux-musl`, verifies the binaries are statically linked, and smoke-tests them under `qemu-riscv64-static`.
+- Packages `riscv-tools-vX.Y.Z-riscv64gc-unknown-linux-musl.tar.gz` and a `SHA256SUMS`.
+- Creates the git tag and GitHub Release in a single atomic `gh release create` call.
+
+Versions with a `-` pre-release label (e.g. `1.0.0-rc.1`) are automatically marked as GitHub pre-releases.
+
+> **Tip:** protect the `v*` tag namespace in GitHub → Settings → Rules to make published tags immutable.
+
 ## Build
 
 ### Prerequisites
