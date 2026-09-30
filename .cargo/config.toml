@@ -1,0 +1,31 @@
+[target.riscv64gc-unknown-linux-musl]
+runner = "qemu-riscv64-static"
+
+# Linker wrapper.  The Rust 1.98 link spec for this target unconditionally
+# emits "-lgcc_s" in late_link_args even though:
+#   * panic=abort means zero stack-unwinding symbols are referenced, and
+#   * compiler_builtins covers all GCC arithmetic helpers on rv64.
+# Suppressing the flag via "-C link-self-contained=+unwind" (which would
+# substitute the bundled libunwind.a) requires -Z unstable-options on stable
+# Rust.  The wrapper below is the stable-Rust equivalent: it drops the flag
+# before invoking the bundled rust-lld, which then links a fully static binary.
+#
+# When this Rust issue is resolved upstream the wrapper can be removed and
+# replaced with:
+#   rustflags = ["-C", "link-self-contained=+unwind"]
+# (plus a nightly toolchain, or once that flag is stabilised).
+linker = "scripts/riscv64-musl-lld"
+rustflags = [
+    # ld.lld flavor: Cargo passes ld-style args (no -Wl, wrappers) with
+    # -flavor gnu prepended — the wrapper must NOT add it again.
+    "-C", "linker-flavor=ld.lld",
+    # link-self-contained=yes: Rust injects the musl CRT objects and the
+    # self-contained library search path; also emits -lgcc_s which the
+    # wrapper substitutes with -lunwind from that same search path.
+    "-C", "link-self-contained=yes",
+    # relocation-model=static produces a plain non-PIE static binary (uses
+    # crt1.o, not Scrt1.o). Static-PIE with Scrt1.o segfaults under QEMU 8.2
+    # because Scrt1.o relies on ld.so for GOT relocation, which a static
+    # binary does not have. PIE/ASLR is not required for CLI tools.
+    "-C", "relocation-model=static",
+]

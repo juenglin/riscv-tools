@@ -1,0 +1,30 @@
+#!/bin/bash
+# Linker wrapper for riscv64gc-unknown-linux-musl.
+#
+# Cargo invokes this with linker-flavor=ld.lld, so args arrive in ld style
+# with "-flavor" "gnu" already prepended — do NOT re-add it here.
+#
+# The Rust 1.98 link spec emits "-lgcc_s" in late_link_args.  libgcc_s is a
+# *shared* library that would break the self-contained binary goal.  The Rust
+# toolchain bundles the static equivalent — libunwind.a — in the musl
+# self-contained sysroot.  We substitute it, and also add that sysroot
+# directory to the search path (which the link spec omits without
+# link-self-contained=yes).
+#
+# Why not "-C link-self-contained=+unwind" instead?  That flag is behind
+# -Z unstable-options on Rust 1.98 stable.
+
+SYSROOT="$(rustc --print sysroot)"
+RUST_LLD="$SYSROOT/lib/rustlib/x86_64-unknown-linux-gnu/bin/rust-lld"
+MUSL_SC="$SYSROOT/lib/rustlib/riscv64gc-unknown-linux-musl/lib/self-contained"
+
+args=()
+for arg in "$@"; do
+    if [ "$arg" = "-lgcc_s" ]; then
+        args+=("-lunwind")   # static equivalent; libunwind.a is in MUSL_SC
+    else
+        args+=("$arg")
+    fi
+done
+
+exec "$RUST_LLD" "${args[@]}" "-L$MUSL_SC"
